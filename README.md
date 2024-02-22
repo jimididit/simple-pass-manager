@@ -50,3 +50,19 @@ The script accepts up to four arguments: length (optional), username, website, a
 
 ```bash
 ./generate_password.sh 12 john.doe@example.com github ./pass.txt
+```
+
+This command generates a 12-character password for john.doe@example.com on github and saves it to ./pass.txt.
+
+## Contributing
+Your contributions are welcome! If you have suggestions for improvements or encounter any issues, feel free to fork the repository, make your changes, and submit a pull request.
+
+## License
+Simple Pass Manager is released under the MIT License. See the LICENSE file in the repository for more details.
+
+## Acknowledgments
+A big thank you to all contributors and those who have provided feedback and suggestions.
+This project was inspired by the need for a user-friendly, secure password management solution.
+
+## Disclaimer
+Please note that this script is provided "as is" without warranty of any kind. Use it at your own risk. Always follow best practices for password management and security.
