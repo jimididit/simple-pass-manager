@@ -66,3 +66,5 @@ This project was inspired by the need for a user-friendly, secure password manag
 
 ## Disclaimer
 Please note that this script is provided "as is" without warranty of any kind. Use it at your own risk. Always follow best practices for password management and security.
+
+![Jimi Dab](./jimi_dab_cropped.png "Jimi Doing a Dab")
