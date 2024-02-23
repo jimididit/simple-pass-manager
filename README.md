@@ -2,13 +2,14 @@
 
 ## Project Overview
 
-Simple Pass Manager is a Bash script project that helps users generate secure, unique passwords for various services and websites. This tool is designed to enforce strong password practices by incorporating a mix of upper and lowercase letters, numbers, and special characters into the passwords it generates. Users can specify the desired password length, ensuring flexibility and security tailored to individual needs.
+Simple Pass Manager is a Bash script project that helps users generate secure, unique passwords for various services and websites, then lets users save new passwords to a local destination (preferably on an encrypted drive). This tool is designed to enforce strong password practices by incorporating a mix of upper and lowercase letters, numbers, and special characters into the passwords it generates, and elimate saving passwords on the cloud, which brings numerous risks. Users can specify the desired password length, ensuring flexibility and security tailored to individual needs, as well as the path of their passwords text file.
 
 ## Features
 
 - Customizable password complexity with a mix of characters, numbers, and symbols.
 - Unique password generation for each username and service combination.
 - Adjustable password length, with a default of 8 and a maximum of 32 characters.
+- Saves new passwords locally.
 - Error handling to guide users through correct script usage.
 
 ## Prerequisites
