@@ -50,7 +50,7 @@ The script accepts up to four arguments: length (optional), username, website, a
 ### Example Command
 
 ```bash
-./generate_password.sh 12 john.doe@example.com github ./pass.txt
+./passgen.sh 12 john.doe@example.com github ./pass.txt
 ```
 
 This command generates a 12-character password for john.doe@example.com on github and saves it to ./pass.txt.
