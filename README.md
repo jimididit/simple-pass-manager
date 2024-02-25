@@ -34,7 +34,7 @@ Before you begin, ensure you have the following:
 
 3. **Make the Script Executable:**
     ```bash
-    chmod +x generate_password.sh
+    chmod +x passgen.sh
     ```
     This command updates the script's permissions, allowing it to be run.
 
