@@ -5,7 +5,24 @@ set -euo pipefail
 umask 077
 
 VAULT=${PASSVAULT:-$HOME/.passvault.gpg}
-GPG=(gpg --quiet --pinentry-mode loopback)  # no --batch: it forbids the interactive passphrase prompt
+
+# gpg with the passphrase handed over via a pipe, never argv. $1 = passphrase.
+# We prompt ourselves exactly once per run (no --batch needed, no gpg-agent prompts).
+gpgp() { local p=$1; shift; gpg --quiet --pinentry-mode loopback --passphrase-file <(printf %s "$p") "$@"; }
+
+# prompt for a secret without echo -> $REPLY_PW
+ask() {
+  IFS= read -rsp "$1" REPLY_PW || { echo "Error: no passphrase given." >&2; exit 1; }
+  if [[ -t 0 ]]; then echo >&2; fi
+  [[ -n $REPLY_PW ]] || { echo "Error: passphrase can't be empty." >&2; exit 1; }
+}
+
+# ask for the master passphrase once -> $PASS. A brand-new vault asks twice so a typo can't lock you out.
+unlock() {
+  if [[ -f $VAULT ]]; then ask "Vault passphrase: "; PASS=$REPLY_PW; return; fi
+  ask "New vault passphrase: "; PASS=$REPLY_PW
+  ask "Confirm passphrase: "; [[ $REPLY_PW == "$PASS" ]] || { echo "Error: passphrases don't match." >&2; exit 1; }
+}
 
 usage() {
   cat >&2 <<EOF
@@ -26,13 +43,13 @@ EOF
 
 # decrypted vault to stdout; empty only if no vault exists yet.
 # A failed decrypt (wrong passphrase, corrupt file) must abort, never look like "empty".
-read_vault() { [[ -f $VAULT ]] || return 0; "${GPG[@]}" -d "$VAULT"; }
+read_vault() { [[ -f $VAULT ]] || return 0; gpgp "$PASS" -d "$VAULT"; }
 
 # stdin -> encrypted vault, atomically
 write_vault() {
   local tmp; tmp=$(mktemp "$VAULT.XXXXXX")
   trap 'rm -f "$tmp"' EXIT
-  "${GPG[@]}" --yes -c --cipher-algo AES256 -o "$tmp" && mv "$tmp" "$VAULT"
+  gpgp "$PASS" --yes -c --cipher-algo AES256 -o "$tmp" && mv "$tmp" "$VAULT"
 }
 
 check_field() {
@@ -75,6 +92,7 @@ case $cmd in
     [[ $user == - ]] && user=""          # "-" = no user
     check_field "$site"; [[ -z $user ]] || check_field "$user"
     [[ $len =~ ^[0-9]+$ && $len -ge 8 && $len -le 64 ]] || { echo "Error: length must be 8-64." >&2; exit 1; }
+    unlock
     data=$(read_vault)
     if awk -F'\t' -v s="$site" -v u="$user" '$1==s && $2==u {f=1} END{exit !f}' <<<"$data"; then
       echo "Error: entry for ${user:-(no user)} at $site already exists." >&2; exit 1
@@ -86,6 +104,7 @@ case $cmd in
     ;;
   get)
     [[ $# -ge 1 && $# -le 2 ]] || usage
+    unlock
     u=${2:-}; ex=0; [[ $# -eq 2 ]] && ex=1; [[ $u == - ]] && u=""   # explicit user (incl. "-") matches exactly
     out=$(read_vault | awk -F'\t' -v s="$1" -v u="$u" -v ex="$ex" '$1==s && (!ex && u=="" || $2==u) {print $2 "\t" $3}')
     [[ -n $out ]] || { echo "Not found." >&2; exit 1; }
@@ -96,6 +115,7 @@ case $cmd in
     ;;
   import)
     [[ $# -eq 1 && -f $1 ]] || usage
+    unlock
     data=$(read_vault)
     # old format user:site:password (password may not contain ':'); skip blanks/dups
     # existing site/user keys only (never passwords) arrive via fd, not argv
@@ -109,20 +129,22 @@ case $cmd in
     ;;
   passwd)
     [[ -f $VAULT ]] || { echo "Error: no vault yet." >&2; exit 1; }
-    data=$(read_vault)                       # old passphrase; aborts if wrong
+    unlock                                   # current passphrase
+    data=$(read_vault)                       # aborts if wrong
+    ask "New passphrase: "; np=$REPLY_PW
+    ask "Confirm new passphrase: "; [[ $REPLY_PW == "$np" ]] || { echo "Error: passphrases don't match; vault unchanged." >&2; exit 1; }
     bak=$VAULT.bak.$(date +%s); cp -p "$VAULT" "$bak"
     tmp=$(mktemp "$VAULT.XXXXXX"); trap 'rm -f "$tmp"' EXIT
-    echo "Enter NEW passphrase." >&2
-    printf '%s\n' "$data" | "${GPG[@]}" --yes -c --cipher-algo AES256 -o "$tmp"
-    echo "Re-enter NEW passphrase to confirm." >&2
-    [[ $("${GPG[@]}" -d "$tmp") == "$data" ]] || { echo "Error: confirmation failed; vault unchanged." >&2; exit 1; }
+    printf '%s\n' "$data" | gpgp "$np" --yes -c --cipher-algo AES256 -o "$tmp"
+    [[ $(gpgp "$np" -d "$tmp") == "$data" ]] || { echo "Error: verification failed; vault unchanged." >&2; exit 1; }
     mv "$tmp" "$VAULT"
     echo "Passphrase changed. Old vault (old passphrase) kept at $bak - delete it once the new one works: shred -u $bak" >&2
     ;;
-  list) read_vault | awk -F'\t' '{print $1 "\t" ($2=="" ? "-" : $2)}' | sort ;;
+  list) unlock; read_vault | awk -F'\t' '{print $1 "\t" ($2=="" ? "-" : $2)}' | sort ;;
   rm)
     [[ $# -ge 1 && $# -le 2 ]] || usage
     u=${2:--}; [[ $u == - ]] && u=""
+    unlock
     data=$(read_vault)
     new=$(awk -F'\t' -v s="$1" -v u="$u" '!($1==s && $2==u)' <<<"$data")
     [[ $new != "$data" ]] || { echo "Not found." >&2; exit 1; }

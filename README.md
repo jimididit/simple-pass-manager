@@ -31,7 +31,7 @@ chmod +x passgen.sh
 ./test.sh                                   # smoke test (throwaway vault)
 ```
 
-You are asked for the vault passphrase on first use (gpg-agent caches it briefly). **Don't lose it - there is no recovery.** Back up the vault file; it's safe to copy anywhere since it's encrypted.
+Each command asks for the vault passphrase once (the very first `add` asks twice to confirm it). Nothing is cached between commands. **Don't lose it - there is no recovery.** Back up the vault file; it's safe to copy anywhere since it's encrypted.
 
 > Note: this replaces the old plaintext `user:site:password` format. Use `import` to bring old entries in, then `shred -u` the plaintext file.
 
