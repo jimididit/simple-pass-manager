@@ -21,8 +21,9 @@ EOF
   exit 1
 }
 
-# decrypted vault to stdout (empty if no vault yet)
-read_vault() { [[ -f $VAULT ]] && "${GPG[@]}" -d "$VAULT" || true; }
+# decrypted vault to stdout; empty only if no vault exists yet.
+# A failed decrypt (wrong passphrase, corrupt file) must abort, never look like "empty".
+read_vault() { [[ -f $VAULT ]] || return 0; "${GPG[@]}" -d "$VAULT"; }
 
 # stdin -> encrypted vault, atomically
 write_vault() {

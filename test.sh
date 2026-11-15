@@ -16,6 +16,14 @@ $S add "github2" me >/dev/null          # prefix must not collide
 $S rm github me >/dev/null
 $S get github me 2>/dev/null && { echo "rm failed"; exit 1; }
 [[ $(stat -c %a "$PASSVAULT") == 600 ]]
+# wrong passphrase must fail closed: no write, vault untouched
+echo wrongpw >"$PF.bad"
+sed 's|--passphrase-file [^ )]*|--passphrase-file '"$PF.bad"'|' "$PF.sh" >"$PF.bad.sh"
+before=$(sha256sum <"$PASSVAULT")
+bash "$PF.bad.sh" add evil me >/dev/null 2>&1 && { echo "wrong passphrase add succeeded"; exit 1; }
+[[ $(sha256sum <"$PASSVAULT") == "$before" ]] || { echo "vault changed on wrong passphrase"; exit 1; }
+[[ $($S list | wc -l) -eq 1 ]]
+rm -f "$PF.bad" "$PF.bad.sh"
 # import: old format, one dup of existing entry, one new
 printf 'me:github2:abc!1\nbob:site.com:p@ss#9\n\n' >"$PF.old"
 $S import "$PF.old" 2>/dev/null
