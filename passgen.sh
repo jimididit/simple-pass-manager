@@ -5,7 +5,7 @@ set -euo pipefail
 umask 077
 
 VAULT=${PASSVAULT:-$HOME/.passvault.gpg}
-GPG=(gpg --quiet --batch --pinentry-mode loopback)  # ponytail: passphrase prompt per call; gpg-agent caches it
+GPG=(gpg --quiet --pinentry-mode loopback)  # no --batch: it forbids the interactive passphrase prompt
 
 usage() {
   cat >&2 <<EOF
