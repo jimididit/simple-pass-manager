@@ -8,7 +8,8 @@ Simple Pass Manager is a Bash script project that helps users generate secure, u
 
 - Random passwords from `/dev/urandom`, always containing upper, lower, digit and symbol (default 20 chars, 8-64).
 - Everything is stored in **one GPG-encrypted vault** (AES256, passphrase-protected) at `~/.passvault.gpg` (override with `PASSVAULT=/path`).
-- `add`, `get`, `list`, `rm`. Exact-match duplicate detection per site + user.
+- `add`, `get`, `list`, `rm`, `import`, `passwd`. Exact-match duplicate detection per site + user.
+- User is optional (e.g. Wi-Fi SSIDs), and `--no-symbols` gives letters+digits only for devices that reject symbols.
 
 ## Prerequisites
 
@@ -25,7 +26,8 @@ chmod +x passgen.sh
 ./passgen.sh get -c github                  # copy to clipboard, auto-clears in 30s
 ./passgen.sh import old_pass.txt            # import old user:site:password lines
 ./passgen.sh list                           # site<TAB>user
-./passgen.sh rm  github me@example.com
+./passgen.sh rm  github me@example.com      # user optional here too; use - for entries with no user
+./passgen.sh passwd                         # change the master passphrase (keeps a timestamped backup)
 ./test.sh                                   # smoke test (throwaway vault)
 ```
 

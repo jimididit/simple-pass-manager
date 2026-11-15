@@ -18,6 +18,7 @@ Add -c to add/get to copy to clipboard (cleared after 30s) instead of printing.
 Add --no-symbols to add for letters+digits only (some devices reject symbols).
   $0 list                          list site/user pairs
   $0 rm   <site> [user]            delete entry
+  $0 passwd                        change the master passphrase
 Vault: $VAULT (set PASSVAULT to change)
 EOF
   exit 1
@@ -105,6 +106,18 @@ case $cmd in
     [[ -n $new ]] || { echo "Nothing new to import." >&2; exit 1; }
     { [[ -n $data ]] && printf '%s\n' "$data"; printf '%s\n' "$new"; } | write_vault
     echo "Imported $(wc -l <<<"$new") entries. Delete the plaintext file: shred -u $1" >&2
+    ;;
+  passwd)
+    [[ -f $VAULT ]] || { echo "Error: no vault yet." >&2; exit 1; }
+    data=$(read_vault)                       # old passphrase; aborts if wrong
+    bak=$VAULT.bak.$(date +%s); cp -p "$VAULT" "$bak"
+    tmp=$(mktemp "$VAULT.XXXXXX"); trap 'rm -f "$tmp"' EXIT
+    echo "Enter NEW passphrase." >&2
+    printf '%s\n' "$data" | "${GPG[@]}" --yes -c --cipher-algo AES256 -o "$tmp"
+    echo "Re-enter NEW passphrase to confirm." >&2
+    [[ $("${GPG[@]}" -d "$tmp") == "$data" ]] || { echo "Error: confirmation failed; vault unchanged." >&2; exit 1; }
+    mv "$tmp" "$VAULT"
+    echo "Passphrase changed. Old vault (old passphrase) kept at $bak - delete it once the new one works: shred -u $bak" >&2
     ;;
   list) read_vault | awk -F'\t' '{print $1 "\t" ($2=="" ? "-" : $2)}' | sort ;;
   rm)

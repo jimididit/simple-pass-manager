@@ -38,4 +38,9 @@ pw2=$($S add Net20 - 12 2>/dev/null); [[ ${#pw2} -eq 12 ]]
 [[ $($S list | grep -c -- $'\t-$') -eq 2 ]]
 $S rm Net10 >/dev/null; $S rm Net20 - >/dev/null
 [[ $($S list | wc -l) -eq 2 ]]
+# passwd: re-encrypts, keeps contents, leaves a backup (harness uses one passphrase, so old==new here)
+before=$($S list)
+$S passwd 2>/dev/null
+[[ $($S list) == "$before" ]]
+[[ $(ls "$PASSVAULT".bak.* | wc -l) -eq 1 ]]
 rm -f "$PF" "$PF.sh" "$PF.old"; echo OK
