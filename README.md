@@ -25,7 +25,8 @@ chmod +x passgen.sh
 ./passgen.sh get github me@example.com      # print password (user optional if only one)
 ./passgen.sh get -c github                  # copy to clipboard, auto-clears in 30s
 ./passgen.sh import old_pass.txt            # import old user:site:password lines
-./passgen.sh list                           # site<TAB>user
+./passgen.sh list                           # site<TAB>user (never shows passwords)
+./passgen.sh list git                       # only entries whose site or user contains "git"
 ./passgen.sh rm  github me@example.com      # user optional here too; use - for entries with no user
 ./passgen.sh passwd                         # change the master passphrase (keeps a timestamped backup)
 ./test.sh                                   # smoke test (throwaway vault)

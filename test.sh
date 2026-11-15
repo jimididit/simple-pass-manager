@@ -39,6 +39,12 @@ $S import "$PASSVAULT.old" 2>/dev/null
 [[ $($S get site.com bob) == 'p@ss#9' ]]
 [[ $($S list | wc -l) -eq 2 ]]          # github2/me was already there
 
+# list filter: case-insensitive, literal substring on site or user, never shows passwords
+[[ $($S list GIT) == $'github2\tme' ]]
+[[ $($S list SITE) == $'site.com\tbob' ]]
+[[ $($S list .) == $'site.com\tbob' ]]      # "." is literal, not a regex wildcard
+[[ -z $($S list zzz) ]]
+[[ $($S list | wc -l) -eq 2 ]]
 # optional user + --no-symbols (the Wi-Fi SSID case)
 pw=$($S add Net10 --no-symbols 2>/dev/null)
 [[ $pw =~ ^[A-Za-z0-9]{20}$ ]]

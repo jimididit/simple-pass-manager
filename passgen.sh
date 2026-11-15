@@ -33,7 +33,7 @@ Usage:
   $0 import <file>                 import old plaintext user:site:password lines
 Add -c to add/get to copy to clipboard (cleared after 30s) instead of printing.
 Add --no-symbols to add for letters+digits only (some devices reject symbols).
-  $0 list                          list site/user pairs
+  $0 list [filter]                 list site/user pairs (filter: case-insensitive substring)
   $0 rm   <site> [user]            delete entry
   $0 passwd                        change the master passphrase
 Vault: $VAULT (set PASSVAULT to change)
@@ -140,7 +140,13 @@ case $cmd in
     mv "$tmp" "$VAULT"
     echo "Passphrase changed. Old vault (old passphrase) kept at $bak - delete it once the new one works: shred -u $bak" >&2
     ;;
-  list) unlock; read_vault | awk -F'\t' '{print $1 "\t" ($2=="" ? "-" : $2)}' | sort ;;
+  list)
+    [[ $# -le 1 ]] || usage
+    unlock
+    read_vault | awk -F'\t' -v f="${1:-}" '
+      BEGIN{f=tolower(f)}
+      f=="" || index(tolower($1),f) || index(tolower($2),f) {print $1 "\t" ($2=="" ? "-" : $2)}' | sort
+    ;;
   rm)
     [[ $# -ge 1 && $# -le 2 ]] || usage
     u=${2:--}; [[ $u == - ]] && u=""
