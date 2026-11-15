@@ -19,6 +19,8 @@ Bash, `gpg`, `awk` (all standard on Linux/macOS).
 ```bash
 chmod +x passgen.sh
 ./passgen.sh add github me@example.com 24   # generate, store, print
+./passgen.sh add Net10 --no-symbols         # no user needed (e.g. Wi-Fi SSIDs); letters+digits only
+./passgen.sh add Net20 - 12                 # "-" = no user, so you can still set a length
 ./passgen.sh get github me@example.com      # print password (user optional if only one)
 ./passgen.sh get -c github                  # copy to clipboard, auto-clears in 30s
 ./passgen.sh import old_pass.txt            # import old user:site:password lines

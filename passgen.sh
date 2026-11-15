@@ -10,12 +10,14 @@ GPG=(gpg --quiet --batch --pinentry-mode loopback)  # ponytail: passphrase promp
 usage() {
   cat >&2 <<EOF
 Usage:
-  $0 add  <site> <user> [length]   generate + store (default length 20, 8-64)
-  $0 get  <site> [user]            print password
+  $0 add  <site> [user] [length]   generate + store (default length 20, 8-64)
+                                   user is optional; use - as user to set a length without one
+  $0 get  <site> [user]            print password (user "-" = entry with no user)
   $0 import <file>                 import old plaintext user:site:password lines
 Add -c to add/get to copy to clipboard (cleared after 30s) instead of printing.
+Add --no-symbols to add for letters+digits only (some devices reject symbols).
   $0 list                          list site/user pairs
-  $0 rm   <site> <user>            delete entry
+  $0 rm   <site> [user]            delete entry
 Vault: $VAULT (set PASSVAULT to change)
 EOF
   exit 1
@@ -37,11 +39,12 @@ check_field() {
 }
 
 gen() {
-  local len=$1 pw
+  local len=$1 pw chars='A-Za-z0-9!@#$%^&*_+=?-'
+  [[ $nosym -eq 1 ]] && chars='A-Za-z0-9'
   while :; do
-    pw=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*_+=?-' </dev/urandom | head -c "$len" || true)
+    pw=$(LC_ALL=C tr -dc "$chars" </dev/urandom | head -c "$len" || true)
     # require every character class so sites with policies accept it
-    [[ $pw =~ [a-z] && $pw =~ [A-Z] && $pw =~ [0-9] && $pw =~ [^A-Za-z0-9] ]] && { printf %s "$pw"; return; }
+    [[ $pw =~ [a-z] && $pw =~ [A-Z] && $pw =~ [0-9] && ( $nosym -eq 1 || $pw =~ [^A-Za-z0-9] ) ]] && { printf %s "$pw"; return; }
   done
 }
 
@@ -58,28 +61,32 @@ emit() {
   echo "Copied to clipboard (clears in 30s)." >&2
 }
 
-copy=0; args=()
-for a in "$@"; do [[ $a == -c ]] && copy=1 || args+=("$a"); done
+copy=0 nosym=0; args=()
+for a in "$@"; do
+  case $a in -c) copy=1 ;; --no-symbols) nosym=1 ;; *) args+=("$a") ;; esac
+done
 set -- ${args[@]+"${args[@]}"}
 cmd=${1:-}; shift || true
 case $cmd in
   add)
-    [[ $# -ge 2 && $# -le 3 ]] || usage
-    site=$1 user=$2 len=${3:-20}
-    check_field "$site"; check_field "$user"
+    [[ $# -ge 1 && $# -le 3 ]] || usage
+    site=$1 user=${2:-} len=${3:-20}
+    [[ $user == - ]] && user=""          # "-" = no user
+    check_field "$site"; [[ -z $user ]] || check_field "$user"
     [[ $len =~ ^[0-9]+$ && $len -ge 8 && $len -le 64 ]] || { echo "Error: length must be 8-64." >&2; exit 1; }
     data=$(read_vault)
     if awk -F'\t' -v s="$site" -v u="$user" '$1==s && $2==u {f=1} END{exit !f}' <<<"$data"; then
-      echo "Error: entry for $user at $site already exists." >&2; exit 1
+      echo "Error: entry for ${user:-(no user)} at $site already exists." >&2; exit 1
     fi
     pw=$(gen "$len")
     { [[ -n $data ]] && printf '%s\n' "$data"; printf '%s\t%s\t%s\n' "$site" "$user" "$pw"; } | write_vault
-    echo "Saved $user at $site." >&2
+    echo "Saved ${user:+$user at }$site." >&2
     emit "$pw"
     ;;
   get)
     [[ $# -ge 1 && $# -le 2 ]] || usage
-    out=$(read_vault | awk -F'\t' -v s="$1" -v u="${2:-}" '$1==s && (u=="" || $2==u) {print $2 "\t" $3}')
+    u=${2:-}; ex=0; [[ $# -eq 2 ]] && ex=1; [[ $u == - ]] && u=""   # explicit user (incl. "-") matches exactly
+    out=$(read_vault | awk -F'\t' -v s="$1" -v u="$u" -v ex="$ex" '$1==s && (!ex && u=="" || $2==u) {print $2 "\t" $3}')
     [[ -n $out ]] || { echo "Not found." >&2; exit 1; }
     if [[ $(wc -l <<<"$out") -gt 1 ]]; then   # several users: show names only, ask to narrow
       echo "Multiple users for $1, specify one:" >&2; cut -f1 <<<"$out" >&2; exit 1
@@ -99,11 +106,12 @@ case $cmd in
     { [[ -n $data ]] && printf '%s\n' "$data"; printf '%s\n' "$new"; } | write_vault
     echo "Imported $(wc -l <<<"$new") entries. Delete the plaintext file: shred -u $1" >&2
     ;;
-  list) read_vault | awk -F'\t' '{print $1 "\t" $2}' | sort ;;
+  list) read_vault | awk -F'\t' '{print $1 "\t" ($2=="" ? "-" : $2)}' | sort ;;
   rm)
-    [[ $# -eq 2 ]] || usage
+    [[ $# -ge 1 && $# -le 2 ]] || usage
+    u=${2:--}; [[ $u == - ]] && u=""
     data=$(read_vault)
-    new=$(awk -F'\t' -v s="$1" -v u="$2" '!($1==s && $2==u)' <<<"$data")
+    new=$(awk -F'\t' -v s="$1" -v u="$u" '!($1==s && $2==u)' <<<"$data")
     [[ $new != "$data" ]] || { echo "Not found." >&2; exit 1; }
     { [[ -n $new ]] && printf '%s\n' "$new" || true; } | write_vault
     echo "Removed."

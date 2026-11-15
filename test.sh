@@ -29,4 +29,13 @@ printf 'me:github2:abc!1\nbob:site.com:p@ss#9\n\n' >"$PF.old"
 $S import "$PF.old" 2>/dev/null
 [[ $($S get site.com bob) == 'p@ss#9' ]]
 [[ $($S list | wc -l) -eq 2 ]]          # github2/me was already there
+# optional user + --no-symbols (the Wi-Fi SSID case)
+pw=$($S add Net10 --no-symbols 2>/dev/null)
+[[ $pw =~ ^[A-Za-z0-9]{20}$ ]]
+[[ $($S get Net10) == "$pw" && $($S get Net10 -) == "$pw" ]]
+$S add Net10 2>/dev/null && { echo "dup no-user allowed"; exit 1; }
+pw2=$($S add Net20 - 12 2>/dev/null); [[ ${#pw2} -eq 12 ]]
+[[ $($S list | grep -c -- $'\t-$') -eq 2 ]]
+$S rm Net10 >/dev/null; $S rm Net20 - >/dev/null
+[[ $($S list | wc -l) -eq 2 ]]
 rm -f "$PF" "$PF.sh" "$PF.old"; echo OK
