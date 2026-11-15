@@ -6,54 +6,40 @@ Simple Pass Manager is a Bash script project that helps users generate secure, u
 
 ## Features
 
-- Customizable password complexity with a mix of characters, numbers, and symbols.
-- Unique password generation for each username and service combination.
-- Adjustable password length, with a default of 8 and a maximum of 32 characters.
-- Saves new passwords locally.
-- Error handling to guide users through correct script usage.
+- Random passwords from `/dev/urandom`, always containing upper, lower, digit and symbol (default 20 chars, 8-64).
+- Everything is stored in **one GPG-encrypted vault** (AES256, passphrase-protected) at `~/.passvault.gpg` (override with `PASSVAULT=/path`).
+- `add`, `get`, `list`, `rm`. Exact-match duplicate detection per site + user.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following:
-- A Bash shell environment.
-- Permission to execute scripts on your system.
+Bash, `gpg`, `awk` (all standard on Linux/macOS).
 
-## Installation Instructions
-
-1. **Clone the Repository:**
-    ```bash
-    git clone https://github.com/jimididit/simple-pass-manager.git
-    ```
-    This command downloads the project to your local machine.
-
-2. **Navigate to the Project Directory:**
-    ```bash
-    cd simple-pass-manager
-    ```
-    Change into the project directory to execute script commands.
-
-3. **Make the Script Executable:**
-    ```bash
-    chmod +x passgen.sh
-    ```
-    This command updates the script's permissions, allowing it to be run.
-
-## How to Use
-
-The script accepts up to four arguments: length (optional), username, website, and the path to the `pass.txt` file.
-
-- **Length**: Specify the desired password length. If not provided, defaults to 8 characters.
-- **Username**: Your username or email associated with the service.
-- **Website**: The website or service name.
-- **File Path**: The relative path to the `pass.txt` file where the password will be stored.
-
-### Example Command
+## Usage
 
 ```bash
-./passgen.sh 12 john.doe@example.com github ./pass.txt
+chmod +x passgen.sh
+./passgen.sh add github me@example.com 24   # generate, store, print
+./passgen.sh get github me@example.com      # print password (user optional if only one)
+./passgen.sh get -c github                  # copy to clipboard, auto-clears in 30s
+./passgen.sh import old_pass.txt            # import old user:site:password lines
+./passgen.sh list                           # site<TAB>user
+./passgen.sh rm  github me@example.com
+./test.sh                                   # smoke test (throwaway vault)
 ```
 
-This command generates a 12-character password for john.doe@example.com on github and saves it to ./pass.txt.
+You are asked for the vault passphrase on first use (gpg-agent caches it briefly). **Don't lose it - there is no recovery.** Back up the vault file; it's safe to copy anywhere since it's encrypted.
+
+> Note: this replaces the old plaintext `user:site:password` format. Use `import` to bring old entries in, then `shred -u` the plaintext file.
+
+## Recovery
+
+There is deliberately no backdoor: a lost passphrase means a lost vault.
+
+1. Write the passphrase on paper and keep it somewhere physically secure (home safe, safe-deposit box), away from your computer and backups.
+2. Keep copies of `~/.passvault.gpg` in a second place (USB drive, private cloud folder). It is safe to sync because it is encrypted.
+3. Test once that a backup opens: `gpg -d backup.gpg`.
+
+For shared/family vaults, consider splitting the passphrase with Shamir sharing (`ssss-split -t 2 -n 3`).
 
 ## Contributing
 Your contributions are welcome! If you have suggestions for improvements or encounter any issues, feel free to fork the repository, make your changes, and submit a pull request.
